@@ -193,6 +193,7 @@ flowop_endop(threadflow_t *threadflow, flowop_t *flowop, int64_t bytes)
 	if (flowop->fo_attrs & FLOW_ATTR_READ) {
 		threadflow->tf_stats.fs_rbytes += bytes;
 		threadflow->tf_stats.fs_rcount++;
+		flowop->fo_stats.fs_rbytes += bytes;
 		flowop->fo_stats.fs_rcount++;
 		controlstats.fs_rbytes += bytes;
 		controlstats.fs_rcount++;
@@ -200,6 +201,7 @@ flowop_endop(threadflow_t *threadflow, flowop_t *flowop, int64_t bytes)
 	} else if (flowop->fo_attrs & FLOW_ATTR_WRITE) {
 		threadflow->tf_stats.fs_wbytes += bytes;
 		threadflow->tf_stats.fs_wcount++;
+		flowop->fo_stats.fs_wbytes += bytes;
 		flowop->fo_stats.fs_wcount++;
 		controlstats.fs_wbytes += bytes;
 		controlstats.fs_wcount++;
