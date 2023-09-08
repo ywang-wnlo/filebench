@@ -197,6 +197,7 @@ typedef struct filebench_shm {
 	int		shm_utid;
 	int		lathist_enabled;
 	int		shm_cvar_heapsize;
+	double	shm_dc_ratio[10];
 
 	/*
 	 * Shared memory allocation control

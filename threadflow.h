@@ -58,6 +58,7 @@ typedef struct threadflow {
 	struct flowop	*tf_thrd_fops;	/* Flowop list */
 	caddr_t		tf_mem;		/* Private Memory */
 	avd_t		tf_memsize;	/* Private Memory size attribute */
+	caddr_t		tf_dc_mem;	/* Private Memory for data compression */
 	fbint_t		tf_constmemsize; /* constant copy of memory size */
 	fb_fdesc_t	tf_fd[THREADFLOW_MAXFD + 1]; /* Thread local fd's */
 	filesetentry_t	*tf_fse[THREADFLOW_MAXFD + 1]; /* Thread local files */

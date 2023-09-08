@@ -440,8 +440,16 @@ flowoplib_iobufsetup(threadflow_t *threadflow, flowop_t *flowop,
 			return (FILEBENCH_ERROR);
 		}
 
-		fb_random(&memoffset, memsize, iosize, NULL);
-		*iobufp = threadflow->tf_mem + memoffset;
+		// 随机生成一个偏移量，以 iosize 对齐，并且起始地址不超过 memsize - iosize
+		if (flowop->fo_attrs & FLOW_ATTR_WRITE) {
+			memsize *= 10;
+			fb_random(&memoffset, memsize, iosize, NULL);
+			*iobufp = threadflow->tf_dc_mem + memoffset;
+		}
+		else {
+			fb_random(&memoffset, memsize, iosize, NULL);
+			*iobufp = threadflow->tf_mem + memoffset;
+		}
 
 	} else {
 		/* use private I/O buffer */

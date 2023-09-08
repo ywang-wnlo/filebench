@@ -322,6 +322,37 @@ flowop_destruct_all_flows(threadflow_t *threadflow)
 	}
 }
 
+#define BATCH_SIZE (128)
+
+static void
+threadflow_init_dc(threadflow_t *threadflow)
+{
+	size_t memsize = (size_t)threadflow->tf_constmemsize;
+	threadflow->tf_dc_mem = malloc(memsize * 10);
+
+	caddr_t buffer = threadflow->tf_dc_mem;
+	for (int idx = 0; idx < 10; idx++)
+	{
+		size_t left = memsize;
+
+		double dc_ratio = filebench_shm->shm_dc_ratio[idx];
+		while (left)
+		{
+			fbint_t batch_size = left > BATCH_SIZE ? BATCH_SIZE : left;
+			fbint_t rb_size = batch_size * dc_ratio;
+			for (fbint_t i = 0; i < batch_size; i++)
+			{
+				if (i < rb_size)
+					buffer[i] = rand() % 256;
+				else
+					buffer[i] = buffer[i - rb_size];
+			}
+			left -= batch_size;
+			buffer += batch_size;
+		}
+	}
+}
+
 /*
  * The final initialization and main execution loop for the
  * worker threads. Sets threadflow and flowop start times,
@@ -413,6 +444,7 @@ flowop_start(threadflow_t *threadflow)
 		threadflow->tf_mem =
 		    malloc(memsize);
 	}
+	threadflow_init_dc(threadflow);
 
 	(void) memset(threadflow->tf_mem, 0, memsize);
 	filebench_log(LOG_DEBUG_SCRIPT, "Thread allocated %d bytes", memsize);

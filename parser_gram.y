@@ -1292,7 +1292,7 @@ var_int_val: FSV_VAL_POSINT
 
 #define	USAGE \
 "Usage: " \
-"filebench {-f <wmlscript> | -h | -c [cvartype]}\n\n" \
+"filebench {-f <wmlscript> | -d <dc_hist> | -h | -c [cvartype]}\n\n" \
 "  Filebench version " FILEBENCH_VERSION "\n\n" \
 "  Filebench is a file system and storage benchmark that interprets a script\n" \
 "  written in its Workload Model Language (WML), and procees to generate the\n" \
@@ -1300,6 +1300,7 @@ var_int_val: FSV_VAL_POSINT
 "  Visit github.com/filebench/filebench for WML definition and tutorials.\n\n" \
 "Options:\n" \
 "   -f <wmlscript> generate workload from the specified file\n" \
+"   -d <dc_hist>   generate data compress ratio from the specified file\n" \
 "   -h             display this help message\n" \
 "   -c             display supported cvar types\n" \
 "   -c [cvartype]  display options of the specific cvar type\n\n"
@@ -1323,6 +1324,7 @@ struct fbparams {
 	char *shmpath;
 	int instance;
 	char *cvartype;
+	char *dc_hist_name;
 };
 
 static void
@@ -1341,7 +1343,7 @@ init_fbparams(struct fbparams *fbparams)
 static int
 parse_options(int argc, char *argv[], struct fbparams *fbparams)
 {
-	const char cmd_options[] = "m:s:a:i:hf:c:";
+	const char cmd_options[] = "m:s:a:i:hf:c:d:";
 	int mode = FB_MODE_NONE;
 	int opt;
 
@@ -1419,6 +1421,9 @@ parse_options(int argc, char *argv[], struct fbparams *fbparams)
 				mode = FB_MODE_CVARS;
 				break;
 			}
+		case 'd':
+			fbparams->dc_hist_name = optarg;
+			break;
 		default:
 			usage_exit(1, "Unrecognized option");
 			break;
@@ -1567,6 +1572,37 @@ parser_abort(int arg)
 }
 
 static void
+get_hist_from_file(FILE *dc_hist, double *dc_ratio) {
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read;
+	int idx = 0;
+
+	bool hist_start = false;
+	while ((read = getline(&line, &len, dc_hist)) != -1) {
+		if (hist_start) {
+			char *pos = strstr(line, "/");
+			if (pos != NULL) {
+				dc_ratio[idx++] = atof(pos + 1);
+				if (idx == 10) {
+					break;
+				}
+			}
+		}
+		else if (strstr(line, "Histogram:") != NULL) {
+			hist_start = true;
+		}
+	}
+
+	printf("Compression Ratio Histogram: ");
+	for (idx = 0; idx < 10; idx++)
+	{
+		printf("%.3f ", dc_ratio[idx]);
+	}
+	printf("\n");
+}
+
+static void
 master_mode(struct fbparams *fbparams) {
 	int ret;
 
@@ -1583,6 +1619,14 @@ master_mode(struct fbparams *fbparams) {
 	fb_set_shmmax();
 
 	ipc_init();
+
+	FILE *dc_hist = fopen(fbparams->dc_hist_name, "r");
+	if (dc_hist) {
+		filebench_log(LOG_INFO, "Loading data compress ratio histgram from %s",
+		    fbparams->dc_hist_name);
+		get_hist_from_file(dc_hist, filebench_shm->shm_dc_ratio);
+		fclose(dc_hist);
+	}
 
 	/* Below we initialize things that depend on IPC */
 	(void)strcpy(filebench_shm->shm_fscriptname,
